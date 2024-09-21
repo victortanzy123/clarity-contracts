@@ -107,7 +107,19 @@ const config: HardhatUserConfig = {
     },
     'base-goerli': {
       url: 'https://goerli.base.org',
-      accounts: [`${process.env.PRIVATE_KEY_BASE_GOERLI || dummyPrivateKey}`],
+      accounts: [
+        `${process.env.PRIVATE_KEY_727 || dummyPrivateKey}`,
+        `${process.env.ALT_PRIVATE_KEY || dummyPrivateKey}`,
+      ],
+      gasPrice: 30 * 1000000000,
+      timeout: 200000,
+    },
+    'base-sepolia': {
+      url: 'https://sepolia.base.org',
+      accounts: [
+        `${process.env.PRIVATE_KEY_727 || dummyPrivateKey}`,
+        `${process.env.ALT_PRIVATE_KEY || dummyPrivateKey}`,
+      ],
       gasPrice: 30 * 1000000000,
       timeout: 200000,
     },
@@ -213,6 +225,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://api-goerli.basescan.org/api',
           browserURL: 'https://goerli.basescan.org',
+        },
+      },
+      {
+        network: 'base-goerli',
+        chainId: 84532,
+        urls: {
+          apiURL: 'https://api-sepolia.basescan.org/api',
+          browserURL: 'https://sepolia.basescan.org',
         },
       },
       {
