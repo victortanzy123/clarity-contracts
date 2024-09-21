@@ -22,9 +22,6 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
     IWorldID public immutable worldId; // WorldID instance used for verifying proofs
     uint256 public immutable externalNullifier; // External nullifier hash for this contract
 
-    // State variables
-    uint256 public counter; // Example counter variable (not used currently)
-
     // Mappings
     mapping(uint256 => uint256) internal attestationIdToNullifierHashRegistry; // Maps attestation ID to nullifier hash
     mapping(uint256 => uint256) internal nullifierHashToPointsRegistry; // Maps nullifier hash to points
