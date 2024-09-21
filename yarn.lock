@@ -683,6 +683,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@layerzerolabs/oapp-evm@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "@layerzerolabs/oapp-evm@npm:0.0.4"
+  dependencies:
+    ethers: ^5.7.2
+  peerDependencies:
+    "@layerzerolabs/lz-evm-messagelib-v2": ^2.3.39
+    "@layerzerolabs/lz-evm-protocol-v2": ^2.3.39
+    "@layerzerolabs/lz-evm-v1-0.7": ^2.3.39
+    "@openzeppelin/contracts": ^4.8.1 || ^5.0.0
+    "@openzeppelin/contracts-upgradeable": ^4.8.1 || ^5.0.0
+  checksum: 96e0f933946aeb031fa080a1c59d4b57b4c84905e46fae949a6d6de665263b5990481b0c0dae0fe5405a84f697850e6322256d217c229305317312f23eb625cc
+  languageName: node
+  linkType: hard
+
 "@metamask/eth-sig-util@npm:^4.0.0":
   version: 4.0.1
   resolution: "@metamask/eth-sig-util@npm:4.0.1"
@@ -3613,6 +3628,7 @@ __metadata:
     "@axelar-network/axelar-gmp-sdk-solidity": ^5.0.0
     "@chainlink/contracts": ^0.6.1
     "@ethsign/sign-protocol-evm": ^1.1.1
+    "@layerzerolabs/oapp-evm": ^0.0.4
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.0.3
     "@nomiclabs/hardhat-etherscan": ^3.0.3

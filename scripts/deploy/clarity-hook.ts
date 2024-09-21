@@ -20,7 +20,11 @@ async function main() {
   console.log('Clarity Hook Deployed!');
 
   /*
-    Latest: 0x586B5D5C9E715963F848EE7b20297D14f6746f53
+    Latest: 0try {
+        x586B5D5C9E715963F848EE7b20297D14f6746f53
+    } catch (error) {
+        
+    }
 
     Schema: onchain_evm_11155111_0x24e
 

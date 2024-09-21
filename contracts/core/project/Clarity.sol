@@ -80,7 +80,7 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
     }
 
     modifier settledOrderOnly(bytes32 orderId) {
-        if (!_isOrderSettled(orderId)) revert SettledOrderPayment(orderId);
+        if (!_isOrderSettled(orderId)) revert UnsettledOrderPayment(orderId);
         _;
     }
 
@@ -93,32 +93,6 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
         if(_isOrderReviewed(orderId)) revert OrderUnreviewed(orderId);
         _;
     }
-
-
-  /*
-     * @notice Makes an attestation where the schema hook expects ERC20 payment.
-     * @dev Emits `AttestationMade`.
-     * @param attestation See `Attestation`.
-     * @param resolverFeesERC20Token ERC20 token address used for payment.
-     * @param resolverFeesERC20Amount Amount of funds to send to the hook.
-     * @param indexingKey Used by the frontend to aid indexing.
-     * @param delegateSignature An optional ECDSA delegateSignature if this is a delegated attestation. Use `""` or `0x`
-     * otherwise.
-     * @param extraData This is forwarded to the resolver directly.
-     * @return attestationId The assigned ID of the attestation.
-
-    function attest(
-        Attestation calldata attestation,
-        IERC20 resolverFeesERC20Token,
-        uint256 resolverFeesERC20Amount,
-        string calldata indexingKey,
-        bytes calldata delegateSignature,
-        bytes calldata extraData
-    )
-        external
-        returns (uint64 attestationId);
-
-    */
 
     /// @notice Sets the Sign Protocol instance.
     /// @param instance The address of the new Sign Protocol instance.
@@ -299,7 +273,7 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
         bytes32 orderId,
         bytes calldata review,
         bytes calldata encodedProof
-    ) internal settledOrderOnly(orderId) unreviewedOrderOnly(orderId) returns (uint64 attestationId) {
+    ) internal settledOrderOnly(orderId) returns (uint64 attestationId) {
         Order memory order = orderRegistry[orderId];
         if (order.reviewAttestationId != 0) revert OrderReviewed(orderId);
         		// We now verify the provided proof is valid and the user is verified by World ID
@@ -314,15 +288,17 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
             linkedAttestationId: 0,
             attestTimestamp: uint64(block.timestamp),
             revokeTimestamp: 0,
-            attester: msg.sender, // Transactee is the reviewer in this case
+            attester: address(this), // Transactee is the reviewer in this case
             validUntil: 0, // No expiration for the review attestation
             dataLocation: DataLocation.ONCHAIN,
             revoked: false,
             recipients: recipients,
             data: review // Review metadata
         });
+
+        bytes memory emptyData = new bytes(0);
         // Attest to sign protocol
-        attestationId = spInstance.attest(reviewAttestation, "", "", encodedProof); // extraData for hook callback
+        attestationId = spInstance.attest(reviewAttestation, "", emptyData, encodedProof); // extraData for hook callback
         // Save the review attestation Id
         orderRegistry[orderId].reviewAttestationId = attestationId;
 
@@ -335,17 +311,10 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
         uint64 attestationIdToRevoke = orderRegistry[orderId].reviewAttestationId;
         orderRegistry[orderId].reviewAttestationId = 0; // reset id
 
-        spInstance.revoke(attestationIdToRevoke, "", "", "");
-    }
+        bytes memory emptyBytes = new bytes(0);
 
-    /*
-            (
-            address signal,
-            uint256 root,
-            uint256 nullifierHash,
-            uint256[8] memory proof
-        ) = abi.decode(encodedParams, (address, uint256, uint256, uint256[8]));
-    */
+        spInstance.revoke(attestationIdToRevoke, "", emptyBytes, emptyBytes);
+    }
 
     /// @notice Retrieves the schema information for the review attestation.
     /// @return reviewSchema The schema information for the review attestation.

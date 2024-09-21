@@ -2,68 +2,65 @@
 pragma solidity ^0.8.20;
 
 import { ClarityERC20 } from "./ClarityERC20.sol";
-
-
-
-// Interfaces
-import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { ISPHook } from "@ethsign/sign-protocol-evm/src/interfaces/ISPHook.sol";
 import { IWorldID } from "../../interfaces/IWorldID.sol";
 import { IEntropyConsumer } from "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import { IEntropy } from "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
-
-// Libraries
 import { BytesHelperLib } from "../libraries/BytesHelperLib.sol";
 
-
-/// @notice Thrown when attempting to reuse a nullifier
-error InvalidNullifier();
-error ZeroAddress();
-
-
+/// @title ClaritySPHook Contract
+/// @notice Implements interaction with WorldID for user attestation and rewards management.
+/// @dev Inherits from ISPHook and ClarityERC20, uses BytesHelperLib for bytes operations.
 contract ClaritySPHook is ISPHook, ClarityERC20 {
     using BytesHelperLib for bytes;
 
-    // IEntropy public immutable entropy;
+    // Constants
+    uint256 public immutable GROUP_ID = 1; // WorldID group ID (always 1)
 
-	/// @dev The World ID instance that will be used for verifying proofs
-	IWorldID public immutable worldId;
+    // Immutable state variables
+    IWorldID public immutable worldId; // WorldID instance used for verifying proofs
+    uint256 public immutable externalNullifier; // External nullifier hash for this contract
 
-	/// @dev The contract's external nullifier hash
-	uint256 public immutable externalNullifier;
+    // State variables
+    uint256 public counter; // Example counter variable (not used currently)
 
-	/// @dev The World ID group ID (always 1)
-	uint256 public immutable GROUP_ID = 1;
+    // Mappings
+    mapping(uint256 => uint256) internal attestationIdToNullifierHashRegistry; // Maps attestation ID to nullifier hash
+    mapping(uint256 => uint256) internal nullifierHashToPointsRegistry; // Maps nullifier hash to points
+    mapping(uint256 => address) internal nullifierHashToUserRegistry; // Maps nullifier hash to user rewards collector address
 
-    uint256 public counter;
+    // Errors
+    error InvalidNullifier(); // Thrown when attempting to reuse a nullifier
+    error ZeroAddress(); // Thrown when attempting to use a zero address
 
-    /// @dev Whether a nullifier hash has been used already. Used to guarantee an action is only performed once by a single person
-	mapping(uint256 => uint256) internal attestationIdToNullifierHashRegistry;
-    
-    /// @dev Maps a nullifier hash to a specific points amount. Used to track points associated with a nullifier hash.
-    mapping( uint256 nullifierHash => uint256 amount) internal nullifierHashToPointsRegistry;
-
-    /// @param _worldId The WorldID instance that will verify the proofs
-	/// @param _appId The World ID app ID
-	/// @param _actionId The World ID action ID
-	constructor(
-        // address _entropy,
-		address _worldId,
-		string memory _appId,
-		string memory _actionId
-	) {
+    /// @notice Constructor to initialize the contract.
+    /// @param _worldId The WorldID instance for proof verification.
+    /// @param _appId The WorldID app ID.
+    /// @param _actionId The WorldID action ID.
+    constructor(address _worldId, string memory _appId, string memory _actionId) {
         if (_worldId == address(0)) revert ZeroAddress();
+        worldId = IWorldID(_worldId);
 
-		worldId = IWorldID(_worldId);
-        // entropy = IEntropy(_entropy);
-		externalNullifier = abi
-			.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId)
-			.hashToField();
-	}
+        // Generate external nullifier using app ID and action ID
+        externalNullifier = abi
+            .encodePacked(abi.encodePacked(_appId).hashToField(), _actionId)
+            .hashToField();
+    }
 
-
-
-    function didReceiveAttestation(address attester, uint64 schemaId, uint64 attestationId, bytes calldata extraData) external payable {
+    /// @notice Handles the reception of an attestation.
+    /// @dev This function verifies the humanhood via WorldID contract and stores the nullifier hash.
+    /// @param attestationId The ID of the attestation.
+    /// @param extraData Encoded data containing signal, root, nullifier hash, and proof.
+    function didReceiveAttestation(
+        address, 
+        uint64, 
+        uint64 attestationId, 
+        bytes calldata extraData
+    ) 
+        external 
+        payable 
+    {
         // Decode the parameters from the bytes input
         (
             address signal,
@@ -71,10 +68,11 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
             uint256 nullifierHash,
             uint256[8] memory proof
         ) = abi.decode(extraData, (address, uint256, uint256, uint256[8]));
-        
+
+        // Map the attestation ID to the nullifier hash
         attestationIdToNullifierHashRegistry[attestationId] = nullifierHash;
 
-        // Verify humanhood via worldId contract
+        // Verify the humanhood via WorldID contract
         worldId.verifyProof(
             root,
             GROUP_ID,
@@ -83,27 +81,84 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
             externalNullifier,
             proof
         );
-        
-        // Once verified can do a gacha
+
+        // Once verified, linearly earned points tagged to the nullifier hash ( ALTERNATIVE SUGGESTION) additional logic (e.g., gacha) can be implemented here
+        _mintReviewReward(nullifierHash);
     }
 
-    function didReceiveAttestation(address attester, uint64 schemaId, uint64 attestationId, IERC20 resolverFeeERC20Token, uint256 resolverFeeERC20Amount, bytes calldata extraData) external {}
+    /// @notice Handles the reception of an attestation with resolver fee (Not in used).
+    function didReceiveAttestation(
+        address attester, 
+        uint64 schemaId, 
+        uint64 attestationId, 
+        IERC20 resolverFeeERC20Token, 
+        uint256 resolverFeeERC20Amount, 
+        bytes calldata extraData
+    ) 
+        external 
+    {}
 
-    function didReceiveRevocation(address attester, uint64 schemaId, uint64 attestationId, bytes calldata extraData) external payable {
-        // Revocation is only possible via the same attestor address (validated at the SP Instance)
-        // Remove attestationId to nulliflierHash
-        attestationIdToNullifierHashRegistry[attestationId] = 0;
-        
-        // Remove points
+    /// @notice Handles the reception of an attestation revocation.
+    /// @dev Removes the attestation ID to nullifier hash mapping and revokes associated rewards.
+    /// @param attestationId The ID of the attestation to be revoked.
+    function didReceiveRevocation(
+        address, 
+        uint64, 
+        uint64 attestationId, 
+        bytes calldata
+    ) 
+        external 
+        payable 
+    {
+        // Get the nullifier hash for the attestation ID
         uint256 nullifierHash = attestationIdToNullifierHashRegistry[attestationId];
+
+        // Remove the mapping and revoke rewards
+        attestationIdToNullifierHashRegistry[attestationId] = 0;
         _revokeReviewRewards(nullifierHash);
     }
 
-    function didReceiveRevocation(address attester, uint64 schemaId, uint64 attestationId, IERC20 resolverFeeERC20Token, uint256 resolverFeeERC20Amount, bytes calldata extraData) external {
-        // ERC20 payment
+    /// @notice Handles the reception of an attestation revocation with resolver fee.
+    function didReceiveRevocation(
+        address attester, 
+        uint64 schemaId, 
+        uint64 attestationId, 
+        IERC20 resolverFeeERC20Token, 
+        uint256 resolverFeeERC20Amount, 
+        bytes calldata extraData
+    ) 
+        external 
+    {}
+
+    /// @notice Verifies the user and assigns the collector address for rewards.
+    /// @param collector The address of the rewards collector.
+    /// @param verifyingData Encoded data containing signal, root, nullifier hash, and proof.
+    function proveUserAndAssignCollector(
+        address collector, 
+        bytes calldata verifyingData
+    ) 
+        external 
+    {
+        _verifyUserAndAssignRewardsAddress(collector, verifyingData);
     }
 
-    function mockVerifyProof(uint256 newCounter, address signal,uint256 root, uint256 nullifierHash, uint256[8] memory proof)external {
+    /// @dev Verifies the user and assigns the rewards collector address internally.
+    /// @param collector The address of the rewards collector.
+    /// @param data Encoded data containing signal, root, nullifier hash, and proof.
+    function _verifyUserAndAssignRewardsAddress(
+        address collector, 
+        bytes calldata data
+    ) 
+        internal 
+    {
+        (
+            address signal,
+            uint256 root,
+            uint256 nullifierHash,
+            uint256[8] memory proof
+        ) = abi.decode(data, (address, uint256, uint256, uint256[8]));
+
+        // Verify proof using WorldID contract
         worldId.verifyProof(
             root,
             GROUP_ID,
@@ -113,37 +168,45 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
             proof
         );
 
-        counter = newCounter;
+        // Assign the collector address to the nullifier hash
+        nullifierHashToUserRegistry[nullifierHash] = collector;
     }
 
-
-        /// @notice Retrieves the nullifier hash associated with a given attestation ID.
+    /// @notice Retrieves the nullifier hash associated with a given attestation ID.
     /// @param attestationId The ID of the attestation to query.
     /// @return nullifierHash The nullifier hash associated with the specified attestation ID.
-    function getNullifierHashForAttestationId(uint256 attestationId) 
+    function getNullifierHashForAttestationId(
+        uint256 attestationId
+    ) 
         external 
         view 
         returns (uint256 nullifierHash) 
     {
-        nullifierHash = attestationIdToNullifierHashRegistry[attestationId];
+        return attestationIdToNullifierHashRegistry[attestationId];
     }
 
     /// @notice Retrieves the points amount associated with a given nullifier hash.
     /// @param nullifierHash The nullifier hash to query.
     /// @return pointsAmount The amount of points associated with the specified nullifier hash.
-    function getPointsForNullifierHash(uint256 nullifierHash) 
+    function getPointsForNullifierHash(
+        uint256 nullifierHash
+    ) 
         external 
         view 
         returns (uint256 pointsAmount) 
     {
-        pointsAmount = nullifierHashToPointsRegistry[nullifierHash];
+        return nullifierHashToPointsRegistry[nullifierHash];
     }
 
+    /// @dev Internal function to mint review reward points.
+    /// @param nullifierHash The nullifier hash to which points are to be assigned.
     function _mintReviewReward(uint256 nullifierHash) internal {
         nullifierHashToPointsRegistry[nullifierHash] += 1;
     }
 
+    /// @dev Internal function to revoke review reward points.
+    /// @param nullifierHash The nullifier hash for which points are to be revoked.
     function _revokeReviewRewards(uint256 nullifierHash) internal {
-         nullifierHashToPointsRegistry[nullifierHash] -= 1;
+        nullifierHashToPointsRegistry[nullifierHash] -= 1;
     }
 }

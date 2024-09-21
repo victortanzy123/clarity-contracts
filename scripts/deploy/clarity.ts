@@ -42,23 +42,26 @@ async function main() {
   const delegateSignature = '0x';
 
   // Step 3: Deploy Clarity main contract
-  //   const CLARITY_CONSTRUCTOR = [SIGN_PROTOCOL_SEPOLIA, CLARITY_SPHOOK_SEPOLIA, USDC_SEPOLIA, SIGN_PROTOCOL_SEPOLIA];
-  //   const clarity = await deploy<Clarity>(deployer, 'Clarity', CLARITY_CONSTRUCTOR, true);
+  const CLARITY_CONSTRUCTOR = [SIGN_PROTOCOL_SEPOLIA, CLARITY_SPHOOK_SEPOLIA, USDC_SEPOLIA, SIGN_PROTOCOL_SEPOLIA];
+  const clarity = await deploy<Clarity>(deployer, 'Clarity', CLARITY_CONSTRUCTOR, true);
 
-  //   console.log('Clarity Main Contract Deployed!');
+  console.log('Clarity Main Contract Deployed!');
 
-  const clarity = await getContractAt<Clarity>('Clarity', CLARITY_SEPOLIA);
+  //   const clarity = await getContractAt<Clarity>('Clarity', CLARITY_SEPOLIA);
+
   const TEST_MERCHANT = '0xe9ED15C9290d782268ba74A08999dba19ca367bE';
   const TEST_MERCHANT_2 = '0x5C15Cf4ab0A650AE95B7109a5e3315EDAd68D5c0';
-  // Register merchant:
-  const tx = await clarity.registerMerchant(TEST_MERCHANT);
+
+  // Register merchants:
+  const tx = await clarity.registerMerchant(TEST_MERCHANT_2);
   const receipt = tx.wait();
+  console.log(`Merchant 0 - ${TEST_MERCHANT} registered!`);
 
-  console.log('Merchant Registered!');
+  const tx2 = await clarity.registerMerchant(TEST_MERCHANT_2);
+  const receipt2 = tx2.wait();
+  console.log(`Merchant 1 - ${TEST_MERCHANT_2} registered!`);
 
-  //   const owner = await attestor.owner();
-  //   console.log('Owner: ', owner);
-
+  // @TO_DO: Configure subgraph project manager.
   /*
 
 

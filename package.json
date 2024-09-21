@@ -53,6 +53,7 @@
     "@axelar-network/axelar-gmp-sdk-solidity": "^5.0.0",
     "@chainlink/contracts": "^0.6.1",
     "@ethsign/sign-protocol-evm": "^1.1.1",
+    "@layerzerolabs/oapp-evm": "^0.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@openzeppelin/contracts": "latest",
     "@openzeppelin/contracts-upgradeable": "4.7.3",

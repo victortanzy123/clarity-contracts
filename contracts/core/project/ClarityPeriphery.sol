@@ -6,10 +6,14 @@
 // import { OneInchSwapHelper } from "./OneInchSwapHelper.sol";
 // import { BoringOwnable } from "../helpers/BoringOwnable.sol";
 
+// import { OApp, Origin, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+
 // // Interfaces
 // import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 // import { ISP } from "@ethsign/sign-protocol-evm/src/interfaces/ISP.sol";
 // import { ISPHook } from "@ethsign/sign-protocol-evm/src/interfaces/ISPHook.sol";
+
+
 
 // // Models
 // import { Attestation } from "@ethsign/sign-protocol-evm/src/models/Attestation.sol";
@@ -32,7 +36,7 @@
 
 // /// @title Clarity Contract
 // /// @notice Contract for managing payments and reviews with attestation and verification logic.
-// contract ClarityPerihperh is BoringOwnable, ClarityController, OneInchSwapHelper {
+// contract ClarityPeriphery is BoringOwnable, ClarityController, OneInchSwapHelper {
 //     using BytesHelperLib for bytes;
 //     using StringHelperLib for string;
 

@@ -17,7 +17,7 @@ error ZeroBalance();
 error InvalidMerchant();
 error InvalidMerchantId(uint256 merchantId);
 error NotSPHookInstance();
-error SettledOrder(uint256 orderId);
+error OrderExists(bytes32 orderId);
 error InvalidMatchingAmount(address token, uint256 amount);
 
 contract ClarityController is TokenHelper {
@@ -65,7 +65,8 @@ contract ClarityController is TokenHelper {
      * @dev Emits a `MerchantRegistered` event upon successful registration.
      */
     function registerMerchant(address merchant) external {
-        uint256 merchantId = totalMerchants++;
+        totalMerchants++;
+        uint256 merchantId = totalMerchants;
         merchantRegistry[merchantId] = merchant;
 
         emit MerchantRegistered(merchantId, merchant);
@@ -131,6 +132,7 @@ contract ClarityController is TokenHelper {
     {
         totalOrders++; // Increment the total number of orders
         // To check if merchanty has been registered
+        if (orderRegistry[orderId].merchantId > 0) revert OrderExists(orderId);
 
         // Create the new order and associate the merchant and transactee
         orderRegistry[orderId] = Order({

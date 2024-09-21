@@ -12,38 +12,21 @@ export function encodeData(types: string[], values: any[]): string {
   return encodedData;
 }
 
-// Schema for Payment
-/*
-[
-  {
-    "name": "orderId",
-    "type": "uint256"
-  },
-  {
-    "name": "referenceId",
-    "type": "string" // Misc. optional field for merchants to include any relevant reference identifier
-  }
-]
-*/
+export function encodeClarityReview(ratings: number, comment: string): string {
+  const REVIEW_TYPES = ['uint256', 'string'];
 
-// Schema for Review
-/*
-[
-  {
-    "name": "overallSatisfaction",
-    "type": "uint256"
-  },
-  {
-    "name": "serviceQuality",
-    "type": "uint256"
-  },
-  {
-    "name": "wouldRecommend",
-    "type": "uint256"
-  },
-  {
-    "name": "remarks",
-    "type": "string"
-  }
-]
-*/
+  return ethers.utils.defaultAbiCoder.encode(REVIEW_TYPES, [ratings, comment]);
+}
+
+export function encodeWorldcoinProof(signal: string, root: string, nullifierHash: string, proof: string[]): string {
+  if (proof.length !== 8) return '';
+
+  const types = [
+    'address', // signal
+    'uint256', // root
+    'uint256', // nullifierHash
+    'uint256[8]', // proof
+  ];
+
+  return ethers.utils.defaultAbiCoder.encode(types, [signal, root, nullifierHash, proof]);
+}
