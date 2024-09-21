@@ -9,6 +9,10 @@ import { IEntropyConsumer } from "@pythnetwork/entropy-sdk-solidity/IEntropyCons
 import { IEntropy } from "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
 import { BytesHelperLib } from "../libraries/BytesHelperLib.sol";
 
+// Errors
+error InvalidNullifier(); // Thrown when attempting to reuse a nullifier
+error ZeroAddress(); // Thrown when attempting to use a zero address
+
 /// @title ClaritySPHook Contract
 /// @notice Implements interaction with WorldID for user attestation and rewards management.
 /// @dev Inherits from ISPHook and ClarityERC20, uses BytesHelperLib for bytes operations.
@@ -27,9 +31,11 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
     mapping(uint256 => uint256) internal nullifierHashToPointsRegistry; // Maps nullifier hash to points
     mapping(uint256 => address) internal nullifierHashToUserRegistry; // Maps nullifier hash to user rewards collector address
 
-    // Errors
-    error InvalidNullifier(); // Thrown when attempting to reuse a nullifier
-    error ZeroAddress(); // Thrown when attempting to use a zero address
+    // Events
+    event Initialised(address worldId, uint256 externalNulliflier);
+    event UserAttestationRewardMint(uint256 indexed nullifierHash, uint256 amount, uint64 attestationId);
+    event UserAttestationRewardBurn(uint256 indexed nullifierHash, uint256 amount, uint64 attestationId);
+    event UserCollectorRegister(uint256 indexed nullifierHash, address collector);
 
     /// @notice Constructor to initialize the contract.
     /// @param _worldId The WorldID instance for proof verification.
@@ -43,6 +49,8 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
         externalNullifier = abi
             .encodePacked(abi.encodePacked(_appId).hashToField(), _actionId)
             .hashToField();
+        
+        emit Initialised(_worldId, externalNullifier);
     }
 
     /// @notice Handles the reception of an attestation.
@@ -80,7 +88,7 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
         );
 
         // Once verified, linearly earned points tagged to the nullifier hash ( ALTERNATIVE SUGGESTION) additional logic (e.g., gacha) can be implemented here
-        _mintReviewReward(nullifierHash);
+        _mintReviewReward(nullifierHash, attestationId);
     }
 
     /// @notice Handles the reception of an attestation with resolver fee (Not in used).
@@ -112,7 +120,7 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
 
         // Remove the mapping and revoke rewards
         attestationIdToNullifierHashRegistry[attestationId] = 0;
-        _revokeReviewRewards(nullifierHash);
+        _revokeReviewRewards(nullifierHash, attestationId);
     }
 
     /// @notice Handles the reception of an attestation revocation with resolver fee.
@@ -167,12 +175,14 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
 
         // Assign the collector address to the nullifier hash
         nullifierHashToUserRegistry[nullifierHash] = collector;
+
+        emit UserCollectorRegister(nullifierHash, collector);
     }
 
     /// @notice Retrieves the nullifier hash associated with a given attestation ID.
     /// @param attestationId The ID of the attestation to query.
     /// @return nullifierHash The nullifier hash associated with the specified attestation ID.
-    function getNullifierHashForAttestationId(
+    function getNullifierHashFromAttestationId(
         uint256 attestationId
     ) 
         external 
@@ -197,13 +207,19 @@ contract ClaritySPHook is ISPHook, ClarityERC20 {
 
     /// @dev Internal function to mint review reward points.
     /// @param nullifierHash The nullifier hash to which points are to be assigned.
-    function _mintReviewReward(uint256 nullifierHash) internal {
+    /// @param attestationId The review attestationId to which the worldId belongs to.
+    function _mintReviewReward(uint256 nullifierHash, uint64 attestationId) internal {
         nullifierHashToPointsRegistry[nullifierHash] += 1;
+
+        emit UserAttestationRewardMint(nullifierHash,  1, attestationId);
     }
 
     /// @dev Internal function to revoke review reward points.
     /// @param nullifierHash The nullifier hash for which points are to be revoked.
-    function _revokeReviewRewards(uint256 nullifierHash) internal {
+        /// @param attestationId The review attestationId to which the worldId belongs to.
+    function _revokeReviewRewards(uint256 nullifierHash, uint64 attestationId) internal {
         nullifierHashToPointsRegistry[nullifierHash] -= 1;
+
+        emit UserAttestationRewardBurn(nullifierHash,  1, attestationId);
     }
 }

@@ -21,7 +21,7 @@ async function main() {
 
   const review = {
     ratings: 5,
-    comment: 'hello world',
+    comment: 'Exceeded expectations! Truly impressive.',
   };
   const encodedReview = encodeClarityReview(review.ratings, review.comment);
   console.log('[ENCODED REVIEW]:', encodedReview);
@@ -40,20 +40,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-
-
-/*
-SEPOLIA
-
-CLARITY MAIN CONTRACT: 0x1aa205ea73e9df203ad794f295b488ef97bfd434
-https://sepolia.etherscan.io/address/0x1aa205ea73e9df203ad794f295b488ef97bfd434#readContract
-
-
-SCHEMA: onchain_evm_11155111_0x24e
-https://testnet-scan.sign.global/schema/onchain_evm_11155111_0x24e
-
-CLARITY SP HOOK: 0x586b5d5c9e715963f848ee7b20297d14f6746f53
-https://sepolia.etherscan.io/address/0x586b5d5c9e715963f848ee7b20297d14f6746f53#readContract
-
-SUBGRAPH: https://api.studio.thegraph.com/query/46716/clarity-test/version/latest
-*/

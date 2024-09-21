@@ -25,6 +25,7 @@ import { StringHelperLib } from "../libraries/StringHelperLib.sol";
 
 error ConfirmationAddressMismatch();
 error UnsettledOrderPayment(bytes32 orderId);
+error NonexistentOrder(bytes32 orderId);
 error ExistingOrder(bytes32 orderId);
 error UnsettledOrder(bytes32 orderId);
 error SettledOrderPayment(bytes32 orderId);
@@ -47,11 +48,13 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
     event ReviewAttested(bytes32 indexed orderId, address indexed payee, uint64 attestationId);
 
     /// @notice Initializes the contract with necessary parameters.
+    /// @param _schemaId The schema Id of the Sign Protocol review shema registered.
     /// @param _spInstance The address of the Sign Protocol instance.
     /// @param _spHook The address of the Sign Protocol Hook instance.
     /// @param _baseCurrency The base currency for transactions.
     /// @param _aggregatorRouterV6 The address of the Aggregator Router for token swaps.
       constructor(
+        uint64 _schemaId,
         address _spInstance, 
         address _spHook, 
         address _baseCurrency, 
@@ -62,7 +65,7 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
         OneInchSwapHelper(_aggregatorRouterV6) 
     { 
         spInstance = ISP(_spInstance);
-        reviewSchemaId = 0x24e;
+        reviewSchemaId = _schemaId;
         spHookInstance = ISPHook(_spHook);
 
         emit Initialised(_msgSender(), _spInstance, _spHook, _baseCurrency);
@@ -71,6 +74,11 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
     modifier unusedOrderIdOnly(string memory rawOrderId) {
         bytes32 orderId = rawOrderId.stringToBytes32();
         if (!_isNewOrderId(orderId)) revert ExistingOrder(orderId);
+        _;
+    }
+
+    modifier existingOrderOnly(bytes32 orderId) {
+        if (_isNewOrderId(orderId)) revert NonexistentOrder(orderId);
         _;
     }
 
@@ -227,7 +235,7 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
     /// @param inputAmount The amount of input currency.
     /// @param currency The address of the input currency.
     /// @param data Data required for swapping the input currency.
-    function _settleOrderPayment(bytes32 orderId, uint256 inputAmount, address currency, bytes calldata data) unsettledOrderOnly(orderId) internal {
+    function _settleOrderPayment(bytes32 orderId, uint256 inputAmount, address currency, bytes calldata data) existingOrderOnly(orderId) unsettledOrderOnly(orderId) internal {
         if (currency == BASE_CURRENCY) {
             _settleOrderPaymentByBaseCurrency(orderId);
         } else {
@@ -333,7 +341,6 @@ contract Clarity is BoringOwnable, ClarityController, OneInchSwapHelper {
     {
         bytes32 orderId = rawOrderId.stringToBytes32();
         Order memory order = orderRegistry[orderId];
-        if (!order.settled) revert UnsettledOrder(orderId);
 
         reviewAttestation = spInstance.getAttestation(order.reviewAttestationId);
     }

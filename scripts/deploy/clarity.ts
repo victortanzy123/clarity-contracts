@@ -76,8 +76,6 @@ async function main() {
   https://sepolia.arbiscan.io/address/address/0xba7177535B4d9A74e7928376e8ecd9db8F689d12#code
   
 
-
-
   Clarity Review Schema Test
   SchemaId: 0x24e
   FULL Schema ID: onchain_evm_11155111_0x24e

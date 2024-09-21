@@ -13,6 +13,7 @@ async function main() {
   const usdc = await getContractAt('ERC20', USDC_SEPOLIA);
 
   const TEST_UUID_STRING = 'd7c2bcca-b768-41c9-947e-2ac8c8b801dE';
+  //   const TEST_UUID_STRING = '8d96e941-4029-4ee2-8f0a-5bf7dfd4f4cc';
   const TEST_UUID_STRING_2 = 'd7edee1b-1e05-4aca-86d9-ec10ac23289e';
 
   console.log('[ALT ACCOUNT ADDRESS]:', altAccount.address);
